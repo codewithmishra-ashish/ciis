@@ -10,6 +10,7 @@ from datetime import datetime
 from collections import defaultdict
 import os
 from dotenv import load_dotenv
+import time
 
 # Load environment variables for API keys
 load_dotenv()
@@ -19,6 +20,7 @@ consumer_key = os.getenv("TWITTER_CONSUMER_KEY", "your_consumer_key")
 consumer_secret = os.getenv("TWITTER_CONSUMER_SECRET", "your_consumer_secret")
 access_token = os.getenv("TWITTER_ACCESS_TOKEN", "your_access_token")
 access_token_secret = os.getenv("TWITTER_ACCESS_TOKEN_SECRET", "your_token_secret")
+bearer_token = os.getenv("TWITTER_BEARER_TOKEN", None)
 
 # Mock data function for testing without API
 def get_mock_data(query, count=100):
@@ -34,21 +36,26 @@ def get_mock_data(query, count=100):
         })
     return data
 
-# Fetch tweets using v2 API
+# Fetch tweets using v2 API with Bearer Token and rate limit handling
 def fetch_tweets(query, count=100):
-    client = tweepy.Client(
-        consumer_key=consumer_key,
-        consumer_secret=consumer_secret,
-        access_token=access_token,
-        access_token_secret=access_token_secret
-    )
+    if bearer_token:
+        client = tweepy.Client(bearer_token=bearer_token)
+    else:
+        client = tweepy.Client(
+            consumer_key=consumer_key,
+            consumer_secret=consumer_secret,
+            access_token=access_token,
+            access_token_secret=access_token_secret
+        )
+    print(f"Client created with {'Bearer Token' if bearer_token else 'OAuth 1.0a'}")
     try:
         tweets = client.search_recent_tweets(
             query=query,
-            max_results=min(count, 100),  # v2 limit is 100 per request
+            max_results=min(count, 100),
             tweet_fields=["created_at", "text", "public_metrics"],
             user_fields=["id", "username", "public_metrics"]
         )
+        print(f"Tweets response: {tweets}")
         return [
             {
                 'id': t.id,
@@ -59,7 +66,12 @@ def fetch_tweets(query, count=100):
                 'user_followers': next((u.public_metrics.get('followers_count', 0) for u in tweets.includes.get('users', []) if u.id == t.author_id), 0)
             }
             for t in tweets.data or []
+            if t.author_id is not None
         ]
+    except tweepy.TooManyRequests as e:
+        st.warning(f"Rate limit exceeded: {e}. Waiting 15 minutes or use mock data. Using mock data now.")
+        time.sleep(900)
+        return get_mock_data(query, count)
     except tweepy.TweepyException as e:
         st.warning(f"Error fetching tweets from X API: {e}. Using mock data.")
         return get_mock_data(query, count)
@@ -85,11 +97,14 @@ def build_interaction_graph(posts):
     G = nx.DiGraph()
     for post in posts:
         user = post['user_id']
-        G.add_node(user, followers=post['user_followers'])
-        for other_post in posts:
-            if post['id'] != other_post['id'] and abs((datetime.strptime(post['created_at'], "%Y-%m-%d %H:%M:%S") -
-                                                       datetime.strptime(other_post['created_at'], "%Y-%m-%d %H:%M:%S")).total_seconds()) < 600:
-                G.add_edge(user, other_post['user_id'], weight=1)
+        followers = post['user_followers']
+        if user is not None and followers is not None:
+            G.add_node(user, followers=followers)
+            for other_post in posts:
+                if (other_post['user_id'] is not None and other_post['user_followers'] is not None and
+                    post['id'] != other_post['id'] and abs((datetime.strptime(post['created_at'], "%Y-%m-%d %H:%M:%S") -
+                                                          datetime.strptime(other_post['created_at'], "%Y-%m-%d %H:%M:%S")).total_seconds()) < 600):
+                    G.add_edge(user, other_post['user_id'], weight=1)
     return G
 
 def analyze_sentiment(text):
@@ -103,6 +118,11 @@ def analyze_sentiment(text):
 
 def detect_anomalies(posts):
     df = pd.DataFrame(posts)
+    # Ensure required columns exist with default values
+    if 'retweet_count' not in df.columns:
+        df['retweet_count'] = 0
+    if 'user_followers' not in df.columns:
+        df['user_followers'] = 0
     features = df[['retweet_count', 'user_followers']].values
     model = IsolationForest(contamination=0.1, random_state=42)
     labels = model.fit_predict(features)
