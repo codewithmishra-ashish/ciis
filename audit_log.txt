@@ -1,0 +1,35 @@
+2025-08-30 14:33:17,246 - Simulated 50 tweets for keyword: boycott india
+2025-08-30 14:33:17,246 - Simulated 50 tweets for keyword: FreeKashmir
+2025-08-30 14:33:17,247 - Simulated 50 tweets for keyword: Modi fascism
+2025-08-30 14:33:17,247 - Simulated 50 tweets for keyword: Hindutva attacks
+2025-08-30 14:33:17,247 - Simulated 50 tweets for keyword: #AntiIndia
+2025-08-30 14:33:17,248 - Simulated 50 tweets for keyword: #FreeKashmir
+2025-08-30 14:33:17,248 - Simulated 50 tweets for keyword: #BoycottIndia
+2025-08-30 14:33:17,251 - Keywords updated: ['boycott india', 'FreeKashmir', 'Modi fascism', 'Hindutva attacks', '#AntiIndia', '#FreeKashmir', '#BoycottIndia']
+2025-08-30 14:33:19,977 - Top influencers: [('India', 0.3524229074889868), ('india', 0.14537444933920707), ('FreeKashmir', 0.12334801762114539), ('AntiIndia', 0.08370044052863437), ('BoycottIndia', 0.07929515418502203)]
+2025-08-30 14:33:20,068 - Detected 178 coordinated pairs
+2025-08-30 14:33:25,008 - Dashboard generated
+2025-08-30 14:33:25,154 - Detected 178 coordinated pairs
+2025-08-30 14:33:25,155 - Report generated: report.json
+2025-08-30 14:33:25,167 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.0.1.17:5000
+2025-08-30 14:33:25,167 - [33mPress CTRL+C to quit[0m
+2025-08-30 14:33:25,168 -  * Restarting with stat
+2025-08-30 14:33:28,744 - Simulated 50 tweets for keyword: boycott india
+2025-08-30 14:33:28,744 - Simulated 50 tweets for keyword: FreeKashmir
+2025-08-30 14:33:28,744 - Simulated 50 tweets for keyword: Modi fascism
+2025-08-30 14:33:28,745 - Simulated 50 tweets for keyword: Hindutva attacks
+2025-08-30 14:33:28,745 - Simulated 50 tweets for keyword: #AntiIndia
+2025-08-30 14:33:28,745 - Simulated 50 tweets for keyword: #FreeKashmir
+2025-08-30 14:33:28,746 - Simulated 50 tweets for keyword: #BoycottIndia
+2025-08-30 14:33:28,749 - Keywords updated: ['boycott india', 'FreeKashmir', 'Modi fascism', 'Hindutva attacks', '#AntiIndia', '#FreeKashmir', '#BoycottIndia']
+2025-08-30 14:33:31,515 - Top influencers: [('India', 0.3948497854077253), ('india', 0.15879828326180256), ('AntiIndia', 0.13304721030042918), ('BoycottIndia', 0.11587982832618025), ('FreeKashmir', 0.1072961373390558)]
+2025-08-30 14:33:31,611 - Detected 168 coordinated pairs
+2025-08-30 14:33:35,809 - Dashboard generated
+2025-08-30 14:33:35,966 - Detected 168 coordinated pairs
+2025-08-30 14:33:35,967 - Report generated: report.json
+2025-08-30 14:33:35,975 -  * Debugger is active!
+2025-08-30 14:33:35,975 -  * Debugger PIN: 511-054-163
+2025-08-30 14:35:19,146 - 127.0.0.1 - - [30/Aug/2025 14:35:19] "[33mGET / HTTP/1.1[0m" 404 -
