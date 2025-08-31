@@ -1,7 +1,6 @@
 import pandas as pd
 import spacy
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from flask import Flask, jsonify
 import networkx as nx
 import plotly.express as px
 import plotly.graph_objects as go
@@ -12,9 +11,9 @@ import logging
 from datetime import datetime, timedelta
 import random
 import os
-from dash import Dash, html, dcc, dash_table, Input, Output
-import threading
-import time
+import json
+import streamlit as st
+from snscrape.modules.twitter import TwitterSearchScraper
 
 # Setup logging for ethical compliance (Task 9)
 logging.basicConfig(filename=os.path.join('audit_log.txt'), level=logging.INFO, 
@@ -37,38 +36,32 @@ ANTI_INDIA_KEYWORDS = [
 def save_keywords(keywords, file_path=os.path.join("keywords.json")):
     try:
         with open(file_path, 'w') as f:
-            import json
             json.dump(keywords, f)
         logging.info(f"Keywords updated: {keywords}")
     except Exception as e:
         logging.error(f"Error saving keywords: {str(e)}")
 
-# Task 2: Fetch Tweets (Simulated with Mock Data)
+# Task 2: Fetch Tweets (Using snscrape)
 def fetch_tweets(keyword, limit=20):
-    tweets = []
     try:
-        for i in range(limit):
-            content = random.choice([
-                f"Sample tweet about {keyword} with some noise",
-                f"Urgent: {keyword} is trending! #India",
-                f"Neutral tweet mentioning India",
-                f"Critical post: {keyword} is a problem!"
-            ])
-            user = f"user_{random.randint(1, 1000)}"
-            tweet_id = f"mock_{i}_{keyword}"
+        tweets = []
+        for i, tweet in enumerate(TwitterSearchScraper(keyword + " lang:en").get_items()):
+            if i >= limit:
+                break
             tweets.append({
-                "username": user,
-                "tweet": content,
-                "retweets_count": random.randint(0, 50),
-                "likes_count": random.randint(0, 100),
-                "date": datetime.now() - timedelta(minutes=random.randint(0, 1440)),
-                "id": tweet_id,
-                "link": f"https://mock-x.com/{user}/status/{tweet_id}"
+                "username": tweet.user.username,
+                "tweet": tweet.rawContent,
+                "retweets_count": tweet.retweetCount,
+                "likes_count": tweet.likeCount,
+                "date": tweet.date,
+                "id": tweet.id,
+                "link": tweet.url
             })
-        logging.info(f"Simulated {len(tweets)} tweets for keyword: {keyword}")
+        logging.info(f"Fetched {len(tweets)} tweets for keyword: {keyword}")
+        return tweets
     except Exception as e:
-        logging.error(f"Error simulating tweets for {keyword}: {str(e)}")
-    return tweets
+        logging.error(f"Error fetching tweets for {keyword}: {str(e)}")
+        return []
 
 # Collect tweets
 all_posts = []
@@ -155,50 +148,88 @@ def detect_coordinated_campaigns(tweets):
         logging.error(f"Coordinated campaign detection error: {str(e)}")
         return []
 
-# Task 7: Alert System (Flask Endpoint)
-flask_app = Flask(__name__)
-ENGAGEMENT_THRESHOLD = 15
-
-@flask_app.route("/alerts", methods=["GET"])
-def get_alerts():
+# Task 10: Countermeasure Report
+def generate_report(tweets, network, influencers):
     try:
-        flagged_posts = [analyze_post(row) for _, row in df.iterrows() if analyze_post(row).get("flagged", False)]
-        high_engagement = [post for post in flagged_posts if post["engagement"] >= ENGAGEMENT_THRESHOLD]
-        alerts = [
-            {"user": post["user"], "content": post["content"], "engagement": post["engagement"], 
-             "sentiment": post["sentiment"], "link": post["link"]}
-            for post in high_engagement
-        ]
-        logging.info(f"Generated {len(alerts)} alerts")
-        return jsonify(alerts)
+        report = {
+            "total_posts": len(tweets),
+            "top_influencers": influencers,
+            "coordinated_campaigns": len(detect_coordinated_campaigns(tweets)),
+            "recommendations": "Monitor top influencers; investigate coordinated posts."
+        }
+        with open(os.path.join("report.json"), "w") as f:
+            json.dump(report, f)
+        logging.info("Report generated: report.json")
     except Exception as e:
-        logging.error(f"Error generating alerts: {str(e)}")
-        return jsonify({"error": "Failed to generate alerts"}), 500
+        logging.error(f"Report generation error: {str(e)}")
 
-# Task 8: Enhanced Dashboard (Dash)
+# Task 8: Enhanced Dashboard (Streamlit)
 def generate_dashboard(tweets, G):
     try:
         df = pd.DataFrame(tweets)
         if df.empty:
-            print("No data for dashboard")
+            st.write("No data for dashboard")
             logging.info("No data for dashboard")
             return
         
-        # Prepare data for table
-        table_data = df[["user", "content", "engagement", "sentiment", "link"]].copy()
+        st.title("Anti-India Campaign Detection Dashboard")
+
+        # Date filter
+        df["date"] = pd.to_datetime(df["date"])
+        min_date = df["date"].min().date()
+        max_date = df["date"].max().date()
+        start_date, end_date = st.date_input(
+            "Select Date Range",
+            [min_date, max_date],
+            min_value=min_date,
+            max_value=max_date
+        )
+        filtered_df = df[(df["date"].dt.date >= start_date) & (df["date"].dt.date <= end_date)]
+
+        # Table
+        st.subheader("Flagged Posts")
+        table_data = filtered_df[["user", "content", "engagement", "sentiment", "link"]].copy()
         table_data["content"] = table_data["content"].str.slice(0, 50) + "..."
         table_data["sentiment"] = table_data["sentiment"].round(2)
         table_data["link"] = table_data["link"].apply(lambda x: f'<a href="{x}" target="_blank">View Post</a>')
+        st.dataframe(table_data, use_container_width=True)
 
         # Engagement trend
-        df["date"] = pd.to_datetime(df["date"])
         df["hour"] = df["date"].dt.floor("h")
         engagement_trend = df.groupby("hour")["engagement"].sum().reset_index()
+        st.subheader("Engagement Trend")
+        fig = px.line(
+            engagement_trend,
+            x="hour",
+            y="engagement",
+            title="Engagement Trend for Flagged Posts",
+            labels={"hour": "Time", "engagement": "Total Engagement (Likes + Retweets)"},
+            color_discrete_sequence=["#FF6B6B"]
+        ).update_layout(
+            plot_bgcolor="#1A1A1A",
+            paper_bgcolor="#1A1A1A",
+            font_color="#FFFFFF"
+        )
+        st.plotly_chart(fig)
 
         # Sentiment histogram
-        sentiment_hist = df["sentiment"]
+        st.subheader("Sentiment Distribution")
+        fig = px.histogram(
+            df,
+            x="sentiment",
+            title="Sentiment Distribution of Flagged Posts",
+            labels={"sentiment": "Sentiment Score", "count": "Number of Posts"},
+            color_discrete_sequence=["#4ECDC4"],
+            nbins=20
+        ).update_layout(
+            plot_bgcolor="#1A1A1A",
+            paper_bgcolor="#1A1A1A",
+            font_color="#FFFFFF"
+        )
+        st.plotly_chart(fig)
 
         # Network graph
+        st.subheader("Influencer Network")
         pos = nx.spring_layout(G)
         edge_x, edge_y = [], []
         for edge in G.edges():
@@ -213,117 +244,19 @@ def generate_dashboard(tweets, G):
             node_x.append(x)
             node_y.append(y)
         node_trace = go.Scatter(x=node_x, y=node_y, mode='markers+text', text=list(G.nodes()), 
-                               marker=dict(size=10, color="#4ECDC4"))
-
-        # Dash app
-        dash_app = Dash(__name__, server=flask_app, url_base_pathname='/dashboard/')
-        
-        dash_app.layout = html.Div([
-            html.H1("Anti-India Campaign Detection Dashboard", style={'color': '#FFFFFF', 'textAlign': 'center'}),
-            html.Label("Filter by Date Range:", style={'color': '#FFFFFF'}),
-            dcc.DatePickerRange(
-                id='date-picker',
-                min_date_allowed=df["date"].min(),
-                max_date_allowed=df["date"].max(),
-                initial_visible_month=df["date"].max(),
-                start_date=df["date"].min(),
-                end_date=df["date"].max()
-            ),
-            html.Br(),
-            html.H3("Flagged Posts", style={'color': '#FFFFFF'}),
-            dash_table.DataTable(
-                id='table',
-                data=table_data.to_dict('records'),
-                columns=[
-                    {"name": "User", "id": "user"},
-                    {"name": "Content", "id": "content"},
-                    {"name": "Engagement", "id": "engagement"},
-                    {"name": "Sentiment", "id": "sentiment"},
-                    {"name": "Link", "id": "link", "type": "text", "presentation": "markdown"}
-                ],
-                style_table={'overflowX': 'auto'},
-                style_cell={'backgroundColor': '#1A1A1A', 'color': '#FFFFFF', 'borderColor': '#444444'},
-                style_header={'backgroundColor': '#333333', 'color': '#FFFFFF'}
-            ),
-            html.H3("Engagement Trend", style={'color': '#FFFFFF'}),
-            dcc.Graph(
-                figure=px.line(
-                    engagement_trend,
-                    x="hour",
-                    y="engagement",
-                    title="Engagement Trend for Flagged Posts",
-                    labels={"hour": "Time", "engagement": "Total Engagement (Likes + Retweets)"},
-                    color_discrete_sequence=["#FF6B6B"]
-                ).update_layout(
-                    plot_bgcolor="#1A1A1A",
-                    paper_bgcolor="#1A1A1A",
-                    font_color="#FFFFFF"
-                )
-            ),
-            html.H3("Sentiment Distribution", style={'color': '#FFFFFF'}),
-            dcc.Graph(
-                figure=px.histogram(
-                    df,
-                    x="sentiment",
-                    title="Sentiment Distribution of Flagged Posts",
-                    labels={"sentiment": "Sentiment Score", "count": "Number of Posts"},
-                    color_discrete_sequence=["#4ECDC4"],
-                    nbins=20
-                ).update_layout(
-                    plot_bgcolor="#1A1A1A",
-                    paper_bgcolor="#1A1A1A",
-                    font_color="#FFFFFF"
-                )
-            ),
-            html.H3("Influencer Network", style={'color': '#FFFFFF'}),
-            dcc.Graph(
-                figure=go.Figure(data=[edge_trace, node_trace]).update_layout(
-                    showlegend=False,
-                    plot_bgcolor="#1A1A1A",
-                    paper_bgcolor="#1A1A1A",
-                    font_color="#FFFFFF"
-                )
-            )
-        ], style={'backgroundColor': '#1A1A1A', 'padding': '20px'})
-
-        # Callback for date filtering
-        @dash_app.callback(
-            Output('table', 'data'),
-            Input('date-picker', 'start_date'),
-            Input('date-picker', 'end_date')
+                                marker=dict(size=10, color="#4ECDC4"))
+        fig = go.Figure(data=[edge_trace, node_trace]).update_layout(
+            showlegend=False,
+            plot_bgcolor="#1A1A1A",
+            paper_bgcolor="#1A1A1A",
+            font_color="#FFFFFF"
         )
-        def update_table(start_date, end_date):
-            filtered_df = df[(df["date"] >= start_date) & (df["date"] <= end_date)]
-            filtered_table = filtered_df[["user", "content", "engagement", "sentiment", "link"]].copy()
-            filtered_table["content"] = filtered_table["content"].str.slice(0, 50) + "..."
-            filtered_table["sentiment"] = filtered_table["sentiment"].round(2)
-            filtered_table["link"] = filtered_table["link"].apply(lambda x: f'<a href="{x}" target="_blank">View Post</a>')
-            return filtered_table.to_dict('records')
+        st.plotly_chart(fig)
 
-        # Run Dash app in a separate thread
-        dash_thread = threading.Thread(target=lambda: dash_app.run(debug=True, host="0.0.0.0", port=8050, use_reloader=False))
-        dash_thread.start()
-        logging.info("Dashboard started on port 8050")
-        dash_thread.join(timeout=2)  # Allow Dash to initialize briefly
-
+        logging.info("Streamlit dashboard rendered")
     except Exception as e:
         logging.error(f"Dashboard generation error: {str(e)}")
-
-# Task 10: Countermeasure Report
-def generate_report(tweets, network, influencers):
-    try:
-        report = {
-            "total_posts": len(tweets),
-            "top_influencers": influencers,
-            "coordinated_campaigns": len(detect_coordinated_campaigns(tweets)),
-            "recommendations": "Monitor top influencers; investigate coordinated posts."
-        }
-        with open(os.path.join("report.json"), "w") as f:
-            import json
-            json.dump(report, f)
-        logging.info("Report generated: report.json")
-    except Exception as e:
-        logging.error(f"Report generation error: {str(e)}")
+        st.error("Error rendering dashboard")
 
 # Main Execution
 if __name__ == "__main__":
@@ -339,10 +272,8 @@ if __name__ == "__main__":
     # Coordinated campaign detection (Task 6)
     coordinated = detect_coordinated_campaigns(flagged_posts)
     
+    # Generate report
+    generate_report(flagged_posts, G, influencers)
+    
     # Generate dashboard (Task 8)
     generate_dashboard(flagged_posts, G)
-    
-    # Start Flask app only once in the main thread after a short delay
-    time.sleep(1)  # Ensure Dash thread has a chance to start
-    logging.info("Starting Flask app on port 5000")
-    flask_app.run(debug=True, host="0.0.0.0", port=5000, threaded=True)
