@@ -1,0 +1,26 @@
+2025-08-31 12:57:22,568 - Simulated 20 tweets for keyword: boycott india
+2025-08-31 12:57:22,570 - Simulated 20 tweets for keyword: FreeKashmir
+2025-08-31 12:57:22,570 - Simulated 20 tweets for keyword: Modi fascism
+2025-08-31 12:57:22,571 - Simulated 20 tweets for keyword: Hindutva attacks
+2025-08-31 12:57:22,571 - Simulated 20 tweets for keyword: #AntiIndia
+2025-08-31 12:57:22,571 - Simulated 20 tweets for keyword: #FreeKashmir
+2025-08-31 12:57:22,572 - Simulated 20 tweets for keyword: #BoycottIndia
+2025-08-31 12:57:22,581 - Keywords updated: ['boycott india', 'FreeKashmir', 'Modi fascism', 'Hindutva attacks', '#AntiIndia', '#FreeKashmir', '#BoycottIndia']
+2025-08-31 12:57:22,751 - Top influencers: [('India', 0.3238095238095238), ('india', 0.13333333333333336), ('AntiIndia', 0.13333333333333336), ('FreeKashmir', 0.1142857142857143), ('BoycottIndia', 0.0761904761904762)]
+2025-08-31 12:57:22,771 - Detected 33 coordinated pairs
+2025-08-31 12:57:23,426 - Dashboard started on port 8050
+2025-08-31 12:57:23,427 - Dash is running on http://0.0.0.0:8050/dashboard/
+
+2025-08-31 12:57:26,433 - Starting Flask app on port 5000
+2025-08-31 12:57:33,291 - Simulated 20 tweets for keyword: boycott india
+2025-08-31 12:57:33,291 - Simulated 20 tweets for keyword: FreeKashmir
+2025-08-31 12:57:33,292 - Simulated 20 tweets for keyword: Modi fascism
+2025-08-31 12:57:33,292 - Simulated 20 tweets for keyword: Hindutva attacks
+2025-08-31 12:57:33,292 - Simulated 20 tweets for keyword: #AntiIndia
+2025-08-31 12:57:33,292 - Simulated 20 tweets for keyword: #FreeKashmir
+2025-08-31 12:57:33,292 - Simulated 20 tweets for keyword: #BoycottIndia
+2025-08-31 12:57:33,295 - Keywords updated: ['boycott india', 'FreeKashmir', 'Modi fascism', 'Hindutva attacks', '#AntiIndia', '#FreeKashmir', '#BoycottIndia']
+2025-08-31 12:57:33,413 - Top influencers: [('India', 0.31428571428571433), ('india', 0.14285714285714288), ('AntiIndia', 0.10476190476190478), ('FreeKashmir', 0.06666666666666668), ('BoycottIndia', 0.06666666666666668)]
+2025-08-31 12:57:33,429 - Detected 31 coordinated pairs
+2025-08-31 12:57:34,030 - Dashboard started on port 8050
+2025-08-31 12:57:37,046 - Starting Flask app on port 5000
